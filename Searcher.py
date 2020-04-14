@@ -1,6 +1,10 @@
 import requests #per llegir web
 import pandas as pd
 import numpy as np
+
+#potenciar-ho
+SSTT_DATA = { 'gir': 'girona.csv'}
+
 def  read_web1():
     link = "https://antiga.sindicat.net/nomenaments/avui/"
     f = requests.get(link)
@@ -36,11 +40,28 @@ def read_list(List):
     df.to_csv(r'./web.csv', encoding='utf-8', header='true')
     return df
 
-def profe_llistat():
-    profe = pd.read_csv("professors.csv")
-    return(profe)
+def profe_llistat2():
+    #Llegeix el document qeu ve de la generalitat i tradueix llibre
+    f=open("Girona01.csv","r",encoding='utf-8')
+    comencar = False
+    Professorat=[]
+    for line in f:
+        if ' 1 ' in line:
+            #Extreure coma de noms i cognoms
+            nom=(line.split(" 1 ")[0]).split(", ")[0]+" "+(line.split(" 1 ")[0]).split(", ")[1]
+            num= line.split(" 1 ")[1]
+            if "." in num: num=num.split(".")[0]+num.split(".")[1]
+            Professorat.append(nom+',1,'+num)
+        if ' 2 ' in line:
+            #Extreure coma de noms i cognoms
+            nom=(line.split(" 2 ")[0]).split(", ")[0]+" "+(line.split(" 2 ")[0]).split(", ")[1]
+            num= line.split(" 2 ")[1]
+            if "." in num: num=num.split(".")[0]+num.split(".")[1]
+            Professorat.append(nom+',1,'+num)
+    return Professorat
 
 def sstt():
+    #tradueix un SSTT segons el seu codi
     print('Consorci Barcelona, Barcelona Comarques, Baix Llobregat, Vallès Occidental, Maresme Vallès Or., Catalunya Central, Girona, Lleida, Tarragona, Terres de lEbre')
     print()
     SSTTn= 0
@@ -59,6 +80,7 @@ def sstt():
     return SSTTn
 
 def assignat():
+    #tradueix el codi d'assignatura
     assign = "pastanaga"
     totes = ['133','134','135','136','137','138','190','192','193','195','198','501','502','503','504','505','506','507','508','509','510','511','512','513','514','515','516','517','518','519','520','521','522','523','524','525','601','602','603','604','605','606','607','608','609','610','611','612','613','614','615','616','617','618','619','620','621','622','623','624','625','626','627','628','629','701','702','703','704','705','706','707','708','709','710','711','712','713','714','715','716','717','718','719','720','721','722','723','725','801','802','803','804','806','807','808','809','810','811','812','813','814','815','816','817','818','819','820','821','AL','ALL','AN','AR','CLA','CN','DI','ECO','EES','EF','FI','FQ','FR','GE','INF','IT','LC','LE','MA','MU','PAN','PEF','PFR','PMU','PRI','PSI','SCO','TEC']
     while True:
@@ -71,6 +93,14 @@ def assignat():
             assign=assign[:3]
             break
     return assign
+
+def juliol():
+    #encara no sé què fer-ne
+    profe = pd.read_csv("juliol.csv")
+    return profe
+
+
+
 
 def main():
     while True:
@@ -92,9 +122,11 @@ def main():
             if Whatdo[0] == 's':
                 print('**********')
                 print(df.loc[(df.st==SSTT)&(df.k==ESPEC)&(df.fi=='31/08/2020')&(df.n>30820)].tail(40))
-        Whatdo= input('\nNo sé què preguntar?\n').lower()
+
+        profe_llistat2()
+        Whatdo= input('\nVols saber els seus noms?\n').lower()
         if Whatdo[0] == 's':
-            print('Jo tampoc')
+            Darrers40 = df.loc[(df.st==SSTT)&(df.k==ESPEC)&(df.fi=='31/08/2020')&(df.n>30820)].tail(40)
 
         restart = input('\nVoleu fer alguna gestió més?\n').lower()
         if restart[0] != 's':
