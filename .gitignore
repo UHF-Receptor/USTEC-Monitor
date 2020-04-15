@@ -13,6 +13,8 @@
 *.vcf
 *.xml
 *.txt
+*.pdf
+*.do
 
 ### Database ###
 *.accdb

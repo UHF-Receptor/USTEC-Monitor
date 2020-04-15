@@ -33,32 +33,48 @@ def read_list(List):
             if '</tr>' in line:
                 comencar = True
             if '<td>' in line and comencar:
-                Llistat.append((line.split("<td>")[1])[:-6])
+                Linia = (line.split("<td>")[1])[:-6]
+                if " (" in line: Linia=Linia.split(" (")[0]
+                if " - " in line: Linia=Linia.split(" - ")[0]+str(" ")+Linia.split(" - ")[1]
+                #Linia=Linia[1:]
+                Llistat.append(Linia)
     x = np.array(Llistat)
     columnes=int(len(Llistat)/9)
     df = pd.DataFrame(np.reshape(x, (columnes,9)),columns=['st','data','n','centre','jor','inici','fi','k','proc'])
+    df.index.names = ['num']
     df.to_csv(r'./web.csv', encoding='utf-8', header='true')
-    return df
+    return(df)
 
-def profe_llistat2():
+def nom_profe2():
     #Llegeix el document qeu ve de la generalitat i tradueix llibre
-    f=open("Girona01.csv","r",encoding='utf-8')
+    f=open("Girona01.txt","r",encoding='utf-8')
+    noms = []
+    nums = []
     comencar = False
     Professorat=[]
     for line in f:
-        if ' 1 ' in line:
+        if ' 1 ' in line and '*' not in line:
             #Extreure coma de noms i cognoms
             nom=(line.split(" 1 ")[0]).split(", ")[0]+" "+(line.split(" 1 ")[0]).split(", ")[1]
             num= line.split(" 1 ")[1]
             if "." in num: num=num.split(".")[0]+num.split(".")[1]
+            a_num = int(num)
+            noms.append(nom)
+            nums.append(a_num)
             Professorat.append(nom+',1,'+num)
-        if ' 2 ' in line:
+        if ' 2 ' in line and '*' not in line:
             #Extreure coma de noms i cognoms
             nom=(line.split(" 2 ")[0]).split(", ")[0]+" "+(line.split(" 2 ")[0]).split(", ")[1]
             num= line.split(" 2 ")[1]
             if "." in num: num=num.split(".")[0]+num.split(".")[1]
+            a_num = int(num)
+            noms.append(nom)
+            nums.append(a_num)
             Professorat.append(nom+',1,'+num)
-    return Professorat
+    df = pd.DataFrame(noms, nums)
+    df.columns = ['noms']
+    df.index.name = 'NumOrdre'
+    return df
 
 def sstt():
     #tradueix un SSTT segons el seu codi
@@ -94,39 +110,50 @@ def assignat():
             break
     return assign
 
-def juliol():
-    #encara no sé què fer-ne
-    profe = pd.read_csv("juliol.csv")
-    return profe
-
-
-
-
 def main():
     while True:
+        Noms=nom_profe2()
         Whatdo= input('\nVoleu actualitzar la base de dades?\n').lower()
+        #Whatdo='n'
         if Whatdo[0] == 's':
-            #prova=['https://antiga.sindicat.net/nomenaments/avui/?data=09/03/2020','https://antiga.sindicat.net/nomenaments/avui/?data=11/03/2020']
+            #prova=['https://antiga.sindicat.net/nomenaments/avui/?data=29/08/2019','https://antiga.sindicat.net/nomenaments/avui/?data=30/08/2019']
             #df = read_list(prova)
             df = read_list(read_web1())
+            df = pd.read_csv('web.csv', index_col = 'num')
         else:
-            df = pd.read_csv('web.csv')
-        #Filter by SSTT and Materia
+            df = pd.read_csv('web.csv', index_col = 'num')
+        #Rename columns and types
+        df = df.rename(columns = {'k': 'espc'})
+        df = df.rename(columns = {'n': 'NumOr'})
+        df['NumOr'] = df['NumOr'].astype(int)
         Whatdo= input('\nVoleu veure com estàn les llistes?\n').lower()
+        #Whatdo ='n'
         if Whatdo[0] == 's':
             SSTT = sstt()
             ESPEC = assignat()
-            print('**********')
-            print(df.loc[(df.st==SSTT)&(df.k==ESPEC)])
+            print()
+            print('Consultem el servei territorial número {} i busquem l especialitat{}'.format(ESPEC,SSTT))
+            print(df[(df.espc == ESPEC) & (df.st == SSTT)])
             Whatdo= input('\nComprobar si hi ha probabilitat de nomanament tot l any?\n').lower()
             if Whatdo[0] == 's':
+                NumOrdre= 1
+                NumOrdre= int(input('\n Quin número de ordre tens?\n'))
+                print(type(NumOrdre))
                 print('**********')
-                print(df.loc[(df.st==SSTT)&(df.k==ESPEC)&(df.fi=='31/08/2020')&(df.n>30820)].tail(40))
+                print(df[(df.st==SSTT)&(df.espc==ESPEC)&(df.fi=='31/08/2020')&(df.jor ==str(1))][df['NumOr']>30000].tail(40))
+                print()
+            Whatdo= input('\nVoleu veure llista amb noms?\n').lower()
+            if Whatdo[0] == 's':
+                Interir_noms = pd.merge(df[(df.st==SSTT)&(df.espc==ESPEC)&(df.fi=='31/08/2020')&(df.jor ==str(1))][df['NumOr']>30000].tail(40), Noms, left_on='NumOr', right_on='NumOrdre')
+                print(Interir_noms.drop_duplicates())
 
-        profe_llistat2()
-        Whatdo= input('\nVols saber els seus noms?\n').lower()
+        Whatdo= input('\nVoleu saber quins professors trobareu en un institut?\n').lower()
         if Whatdo[0] == 's':
-            Darrers40 = df.loc[(df.st==SSTT)&(df.k==ESPEC)&(df.fi=='31/08/2020')&(df.n>30820)].tail(40)
+            nom_institut=input('\nQuin institut?\n')
+            #print(Noms['30820'])
+            Centre_Noms = pd.merge(df[(df.centre==nom_institut)], Noms, left_on='NumOr', right_on='NumOrdre')
+            Centre_Noms = Centre_Noms.drop_duplicates()
+            print(Centre_Noms[['noms','espc' ,'inici','fi','jor']])
 
         restart = input('\nVoleu fer alguna gestió més?\n').lower()
         if restart[0] != 's':
